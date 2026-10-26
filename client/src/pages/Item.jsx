@@ -63,7 +63,7 @@ export default function Item() {
         {!isOwner && item.status === 'active' && (myReq ? (
           <div className="panel">
             <p>Your request: <span className={'tag tag-' + myReq.status}>{myReq.status}</span></p>
-            {myReq.status === 'accepted' && <p>The seller accepted. Contact them at <strong>{myReq.seller.email}</strong> to meet on campus.</p>}
+            {myReq.status === 'accepted' && <p>The seller accepted. Call or message them on <strong>{myReq.seller.phone || 'no phone added'}</strong> (email: {myReq.seller.email}) to meet on campus.</p>}
             {myReq.status === 'pending' && <p className="muted">Waiting for the seller to reply. Track it in My Requests.</p>}
             {myReq.status === 'declined' && <p className="muted">The seller declined this request.</p>}
           </div>

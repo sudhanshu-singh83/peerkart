@@ -20,6 +20,7 @@ app.use('/api/listings', listingRoutes);
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/profile', require('./routes/profile'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/images', require('./routes/images'));
 app.use('/api/requests', require('./routes/requests'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/users', require('./routes/users'));

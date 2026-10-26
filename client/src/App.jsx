@@ -11,6 +11,7 @@ import Requests from './pages/Requests';
 import Profile from './pages/Profile';
 import Seller from './pages/Seller';
 import Admin from './pages/Admin';
+import Avatar from './components/Avatar';
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
@@ -26,7 +27,7 @@ function GuestNav() {
 }
 
 // Left side panel for logged-in users
-function Sidebar({ open, close, pending }) {
+function Sidebar({ open, close, pending, toggle }) {
   const { user, logout } = useAuth();
   const item = (to, label, badge) => (
     <NavLink to={to} onClick={close} className={({ isActive }) => 'side-link' + (isActive ? ' active' : '')}>
@@ -34,7 +35,7 @@ function Sidebar({ open, close, pending }) {
     </NavLink>);
   return (
     <aside className={'sidebar' + (open ? ' open' : '')}>
-      <Link to="/home" className="brand side-brand" onClick={close}>Peer<span>Kart</span></Link>
+      <div className="side-head"><Link to="/home" className="brand side-brand" onClick={close}>Peer<span>Kart</span></Link><button className="icon-btn" onClick={toggle} title="Hide sidebar">&#9776;</button></div>
       <Link to="/sell" className="btn side-sell" onClick={close}>+ Sell an Item</Link>
       <nav className="side-nav">
         <p className="side-title">Marketplace</p>
@@ -48,7 +49,7 @@ function Sidebar({ open, close, pending }) {
         {user.role === 'admin' && <>{<p className="side-title">Admin</p>}{item('/admin', 'Dashboard & Reports')}</>}
       </nav>
       <div className="side-user">
-        <div className="avatar">{user.name[0]}</div>
+        <Avatar user={user} />
         <div className="side-user-info"><strong>{user.name}</strong><span>{user.role}</span></div>
         <button className="btn-link" onClick={logout}>Logout</button>
       </div>
@@ -67,6 +68,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(!!localStorage.getItem('token'));
   const [menuOpen, setMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(localStorage.getItem('sidebar') === 'closed');
   const [pending, setPending] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
@@ -78,6 +80,11 @@ export default function App() {
   // refresh the "Requests Received" badge whenever the page changes
   useEffect(() => { if (user) api('/requests/count').then((d) => setPending(d.count)).catch(() => {}); }, [user, location.pathname]);
 
+  // Phones: open/close the slide-in menu. Computers: hide/show the sidebar (remembered).
+  const toggleSidebar = () => {
+    if (window.innerWidth <= 860) return setMenuOpen(false);
+    localStorage.setItem('sidebar', collapsed ? 'open' : 'closed'); setCollapsed(!collapsed);
+  };
   const login = (token, u) => { localStorage.setItem('token', token); setUser(u); navigate(u.role === 'admin' ? '/admin' : '/home'); };
   const logout = () => { api('/auth/logout', { method: 'POST' }).catch(() => {}); localStorage.removeItem('token'); setUser(null); navigate('/'); };
 
@@ -104,11 +111,11 @@ export default function App() {
   return (
     <AuthContext.Provider value={{ user, setUser, login, logout }}>
       {user ? (
-        <div className="shell">
-          <Sidebar open={menuOpen} close={() => setMenuOpen(false)} pending={pending} />
+        <div className={'shell' + (collapsed ? ' collapsed' : '')}>
+          <Sidebar open={menuOpen} close={() => setMenuOpen(false)} pending={pending} toggle={toggleSidebar} />
           {menuOpen && <div className="overlay" onClick={() => setMenuOpen(false)} />}
           <div className="content">
-            <div className="topbar"><button className="menu-btn" onClick={() => setMenuOpen(true)}>Menu</button><span className="brand">Peer<span>Kart</span></span></div>
+            <div className="topbar"><button className="menu-btn" onClick={() => (window.innerWidth <= 860 ? setMenuOpen(true) : toggleSidebar())}>&#9776; Menu</button><span className="brand">Peer<span>Kart</span></span></div>
             <main className="page">{routes}</main>
           </div>
         </div>

@@ -8,6 +8,8 @@ const User = require('../models/User');
 const Otp = require('../models/Otp');
 const { sendOtpEmail } = require('../mailer');
 const { protect } = require('../middleware/auth');
+const publicUser = require('../userView');
+const PHONE = /^[6-9]\d{9}$/;
 
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { message: 'Too many attempts. Try again later.' } });
 router.use(limiter);
@@ -59,15 +61,17 @@ router.post('/verify-otp', async (req, res, next) => {
 // Step 3: set a password and create the verified account
 router.post('/register', async (req, res, next) => {
   try {
-    const { registrationToken, password } = req.body;
+    const { registrationToken, password, phone, branch, semester } = req.body;
     if (!password || password.length < 8) return res.status(400).json({ message: 'Password must be at least 8 characters.' });
+    if (!PHONE.test(phone || '')) return res.status(400).json({ message: 'Enter a valid 10-digit mobile number.' });
+    if (!branch || branch.length > 40 || !/^[1-8]$/.test(String(semester))) return res.status(400).json({ message: 'Choose your branch and semester (1-8).' });
     let data;
     try { data = jwt.verify(registrationToken, config.jwtSecret); } catch { return res.status(400).json({ message: 'Verification expired. Start again.' }); }
     if (data.purpose !== 'register') return res.status(400).json({ message: 'Invalid token.' });
     if (await User.findOne({ email: data.email })) return res.status(409).json({ message: 'Already registered.' });
     // role is never read from the request body - always "student"
-    const user = await User.create({ name: data.name, email: data.email, passwordHash: await bcrypt.hash(password, 10), isVerified: true });
-    res.status(201).json({ token: signToken(user._id), user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+    const user = await User.create({ name: data.name, email: data.email, passwordHash: await bcrypt.hash(password, 10), isVerified: true, phone, branch, semester: String(semester) });
+    res.status(201).json({ token: signToken(user._id), user: publicUser(user) });
   } catch (err) { next(err); }
 });
 
@@ -77,13 +81,13 @@ router.post('/login', async (req, res, next) => {
     const user = await User.findOne({ email: (email || '').trim().toLowerCase() });
     if (!user || !(await bcrypt.compare(password || '', user.passwordHash))) return res.status(401).json({ message: 'Wrong email or password.' });
     if (user.status === 'deactivated') return res.status(403).json({ message: 'This account has been deactivated.' });
-    res.json({ token: signToken(user._id), user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+    res.json({ token: signToken(user._id), user: publicUser(user) });
   } catch (err) { next(err); }
 });
 
 router.get('/me', protect, (req, res) => {
   const u = req.user;
-  res.json({ user: { id: u._id, name: u.name, email: u.email, role: u.role, status: u.status, branch: u.branch, semester: u.semester, bio: u.bio, createdAt: u.createdAt } });
+  res.json({ user: publicUser(u) });
 });
 // JWTs are stateless: logout simply deletes the token in the browser.
 router.post('/logout', (req, res) => res.json({ message: 'Logged out.' }));

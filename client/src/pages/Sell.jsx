@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { api, CATEGORIES } from '../api';
+import { api, CATEGORIES, compressImage } from '../api';
 
 const empty = { title: '', description: '', category: CATEGORIES[0], condition: 'Good', price: '', subject: '', branch: '', semester: '' };
 
@@ -17,14 +17,14 @@ export default function Sell() {
     if (id) api('/listings/' + id).then((d) => setF({ ...empty, ...d.listing })).catch((e) => setError(e.message));
   }, [id]);
 
-  function pickFiles(e) {
+  async function pickFiles(e) {
     const chosen = Array.from(e.target.files);
     if (chosen.length > 5) return setError('You can upload at most 5 photos.');
     for (const file of chosen) {
       if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return setError('Only JPG, PNG or WEBP images are allowed.');
-      if (file.size > 2 * 1024 * 1024) return setError(file.name + ' is larger than 2 MB.');
+      if (file.size > 15 * 1024 * 1024) return setError(file.name + ' is too large (max 15 MB).');
     }
-    setError(''); setFiles(chosen);
+    setError(''); setFiles(await Promise.all(chosen.map((f) => compressImage(f))));
   }
 
   async function submit(e) {
@@ -60,7 +60,7 @@ export default function Sell() {
         <label>Branch (optional)<input value={f.branch || ''} onChange={set('branch')} /></label>
         <label>Semester (optional)<input value={f.semester || ''} onChange={set('semester')} /></label>
       </div>}
-      <label>Photos (JPG/PNG/WEBP, max 5, 2 MB each){id && ' - leave empty to keep current photos'}<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={pickFiles} /></label>
+      <label>Photos (JPG/PNG/WEBP, up to 5 - they are shrunk automatically){id && ' - leave empty to keep current photos'}<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={pickFiles} /></label>
       <div className="previews">{files.map((file) => <img key={file.name} src={URL.createObjectURL(file)} alt="preview" />)}</div>
       <button className="btn" disabled={busy}>{busy ? 'Saving...' : id ? 'Save Changes' : 'Post Listing'}</button>
     </form>

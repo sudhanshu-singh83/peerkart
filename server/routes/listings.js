@@ -64,7 +64,7 @@ router.post('/', protect, requireActive, upload.array('images', 5), async (req, 
     if (!req.files || req.files.length === 0) return res.status(400).json({ message: 'Upload at least one photo.' });
     if (config.semesterEnd < new Date()) return res.status(400).json({ message: 'The semester has ended. Listings are closed.' });
     const listing = await Listing.create({ ...pickFields(req.body), seller: req.user._id, // seller always comes from the token
-      images: req.files.map((f) => '/uploads/' + f.filename), expiresAt: config.semesterEnd });
+      images: await upload.saveToDb(req.files, req.user._id), expiresAt: config.semesterEnd });
     res.status(201).json({ listing });
   } catch (err) { next(err); }
 });
@@ -101,7 +101,7 @@ router.put('/:id', badId, protect, requireActive, upload.array('images', 5), asy
     const error = validate(req.body);
     if (error) return res.status(400).json({ message: error });
     Object.assign(listing, pickFields(req.body));
-    if (req.files && req.files.length) listing.images = req.files.map((f) => '/uploads/' + f.filename);
+    if (req.files && req.files.length) listing.images = await upload.saveToDb(req.files, req.user._id);
     await listing.save();
     res.json({ listing });
   } catch (err) { next(err); }

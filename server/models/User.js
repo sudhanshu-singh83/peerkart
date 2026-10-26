@@ -6,8 +6,10 @@ const userSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false },
   role: { type: String, enum: ['student', 'admin'], default: 'student' },
   status: { type: String, enum: ['active', 'restricted', 'deactivated'], default: 'active' },
+  phone: { type: String, trim: true, match: /^[6-9]\d{9}$/ },
   branch: { type: String, trim: true, maxlength: 40, default: '' },
   semester: { type: String, trim: true, maxlength: 10, default: '' },
   bio: { type: String, trim: true, maxlength: 200, default: '' },
+  avatar: { type: String, default: '' },
 }, { timestamps: true });
 module.exports = mongoose.model('User', userSchema);

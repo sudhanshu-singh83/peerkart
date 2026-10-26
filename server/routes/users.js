@@ -10,7 +10,7 @@ const { protect } = require('../middleware/auth');
 router.get('/:id', protect, async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Student not found.' });
-    const user = await User.findById(req.params.id).select('name branch semester bio createdAt status');
+    const user = await User.findById(req.params.id).select('name branch semester bio avatar createdAt status');
     if (!user || user.status === 'deactivated') return res.status(404).json({ message: 'Student not found.' });
     const [map, reviews, listings, soldCount] = await Promise.all([
       ratingMap([user._id]),

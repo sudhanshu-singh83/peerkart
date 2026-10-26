@@ -35,7 +35,7 @@ export default function Requests({ mode }) {
               {r.listing && <span> - Rs. {r.listing.price}</span>}
               <p className="muted">{mode === 'sent' ? 'Seller' : 'Buyer'}: {other?.name} | {new Date(r.createdAt).toLocaleDateString()}</p>
               {r.message && <p>"{r.message}"</p>}
-              {r.status === 'accepted' && other?.email && <p>Contact: <strong>{other.email}</strong></p>}
+              {r.status === 'accepted' && other?.email && <p>Contact: <strong>{other.phone || 'no phone added'}</strong> | {other.email}</p>}
             </div>
             <span className={'tag tag-' + r.status}>{r.status}</span>
           </div>

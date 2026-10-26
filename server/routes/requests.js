@@ -9,6 +9,7 @@ const { protect, requireActive } = require('../middleware/auth');
 router.post('/', protect, requireActive, async (req, res, next) => {
   try {
     const { listingId, message } = req.body;
+    if (!req.user.phone) return res.status(400).json({ message: 'Add your mobile number in your Profile first, so the seller can contact you.' });
     if (!mongoose.isValidObjectId(listingId)) return res.status(400).json({ message: 'Invalid listing.' });
     if (message && message.length > 200) return res.status(400).json({ message: 'Message must be under 200 characters.' });
     const listing = await Listing.findById(listingId);
@@ -26,11 +27,11 @@ router.post('/', protect, requireActive, async (req, res, next) => {
 router.get('/sent', protect, async (req, res, next) => {
   try {
     const requests = await Request.find({ buyer: req.user._id }).sort({ createdAt: -1})
-      .populate('listing', 'title price images status').populate('seller', 'name email');
+      .populate('listing', 'title price images status').populate('seller', 'name email phone');
     const reviewed = new Set((await Review.find({ reviewer: req.user._id }).select('listing')).map((r) => String(r.listing)));
     res.json({ requests: requests.map((r) => {
       const obj = r.toObject();
-      if (obj.seller && r.status !== 'accepted') delete obj.seller.email;
+      if (obj.seller && r.status !== 'accepted') { delete obj.seller.email; delete obj.seller.phone; }
       obj.reviewed = !!obj.listing && reviewed.has(String(obj.listing._id));
       return obj;
     }) });
@@ -41,10 +42,10 @@ router.get('/sent', protect, async (req, res, next) => {
 router.get('/received', protect, async (req, res, next) => {
   try {
     const requests = await Request.find({ seller: req.user._id, status: { $ne: 'cancelled' } }).sort({ createdAt: -1 })
-      .populate('listing', 'title price images status').populate('buyer', 'name email');
+      .populate('listing', 'title price images status').populate('buyer', 'name email phone');
     res.json({ requests: requests.map((r) => {
       const obj = r.toObject();
-      if (obj.buyer && r.status !== 'accepted') delete obj.buyer.email;
+      if (obj.buyer && r.status !== 'accepted') { delete obj.buyer.email; delete obj.buyer.phone; }
       return obj;
     }) });
   } catch (err) { next(err); }
@@ -66,6 +67,7 @@ router.patch('/:id', validId, protect, async (req, res, next) => {
     if (!request) return res.status(404).json({ message: 'Request not found.' });
     if (String(request.seller) !== String(req.user._id)) return res.status(403).json({ message: 'This is not your request to answer.' });
     if (request.status !== 'pending') return res.status(400).json({ message: 'This request was already answered.' });
+    if (status === 'accepted' && !req.user.phone) return res.status(400).json({ message: 'Add your mobile number in your Profile first, so the buyer can contact you.' });
     request.status = status; await request.save();
     res.json({ request });
   } catch (err) { next(err); }

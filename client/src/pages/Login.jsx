@@ -3,11 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../App';
 
+const BRANCHES = ['CSE', 'CSE (AI/ML)', 'CSE (Data Science)', 'IT', 'ECE', 'EEE', 'Mechanical', 'Civil', 'MCA', 'MBA', 'Other'];
+
 export default function Login() {
   const [params] = useSearchParams();
   const [mode, setMode] = useState(params.get('mode') === 'register' ? 'register' : 'login');
   const [step, setStep] = useState(1); // register steps: 1 email, 2 OTP, 3 password
-  const [f, setF] = useState({ name: '', email: '', otp: '', password: '' });
+  const [f, setF] = useState({ name: '', email: '', otp: '', password: '', phone: '', branch: '', semester: '' });
   const [token, setToken] = useState('');
   const [msg, setMsg] = useState({ type: '', text: '' });
   const [busy, setBusy] = useState(false);
@@ -31,10 +33,13 @@ export default function Login() {
   });
   const verifyOtp = () => run(async () => {
     const d = await api('/auth/verify-otp', { method: 'POST', body: { name: f.name, email: f.email, otp: f.otp } });
-    setToken(d.registrationToken); setStep(3); setMsg({ type: 'success', text: 'Email verified. Now choose a password.' });
+    setToken(d.registrationToken); setStep(3); setMsg({ type: 'success', text: 'Email verified. Now complete your student details.' });
   });
   const register = () => run(async () => {
-    const d = await api('/auth/register', { method: 'POST', body: { registrationToken: token, password: f.password } });
+    if (!/^[6-9]\d{9}$/.test(f.phone)) throw new Error('Enter a valid 10-digit mobile number.');
+    if (!f.branch || !f.semester) throw new Error('Please select your branch and semester.');
+    if (f.password.length < 8) throw new Error('Password must be at least 8 characters.');
+    const d = await api('/auth/register', { method: 'POST', body: { registrationToken: token, password: f.password, phone: f.phone, branch: f.branch, semester: f.semester } });
     login(d.token, d.user);
   });
   const doLogin = (e) => { e.preventDefault(); run(async () => { const d = await api('/auth/login', { method: 'POST', body: { email: f.email, password: f.password } }); login(d.token, d.user); }); };
@@ -64,7 +69,13 @@ export default function Login() {
               <button className="btn btn-outline" disabled={busy || cooldown > 0} onClick={sendOtp}>{cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend OTP'}</button></div>
           </>)}
           {step === 3 && (<>
+            <label>Mobile number (10 digits)<input value={f.phone} onChange={set('phone')} maxLength={10} inputMode="numeric" placeholder="e.g. 9876543210" /></label>
+            <div className="row">
+              <label>Branch<select value={f.branch} onChange={set('branch')}><option value="">Select</option>{BRANCHES.map((b) => <option key={b}>{b}</option>)}</select></label>
+              <label>Semester<select value={f.semester} onChange={set('semester')}><option value="">Select</option>{[1, 2, 3, 4, 5, 6, 7, 8].map((n) => <option key={n}>{n}</option>)}</select></label>
+            </div>
             <label>Password (min 8 characters)<input type="password" value={f.password} onChange={set('password')} /></label>
+            <p className="muted">Your mobile number is shown only to a student whose buy request you accept (or who accepts yours).</p>
             <button className="btn" disabled={busy} onClick={register}>{busy ? 'Creating...' : 'Create Account'}</button>
           </>)}
         </div>

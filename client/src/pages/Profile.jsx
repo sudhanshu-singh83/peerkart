@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api, compressImage } from '../api';
+import Avatar from '../components/Avatar';
 import { useAuth } from '../App';
 import Stars from '../components/Stars';
 
 export default function Profile() {
   const { user, setUser } = useAuth();
-  const [form, setForm] = useState({ name: user.name, branch: user.branch || '', semester: user.semester || '', bio: user.bio || '' });
+  const [form, setForm] = useState({ name: user.name, phone: user.phone || '', branch: user.branch || '', semester: user.semester || '', bio: user.bio || '' });
   const [pw, setPw] = useState({ currentPassword: '', newPassword: '' });
   const [stats, setStats] = useState({ total: 0, active: 0, sold: 0 });
   const [rating, setRating] = useState({ avg: 0, count: 0 });
@@ -22,17 +23,31 @@ export default function Profile() {
   const save = () => run(async () => { const d = await api('/profile', { method: 'PUT', body: form }); setUser({ ...user, ...d.user }); setEditing(false); }, 'Profile updated.');
   const changePw = () => run(async () => { await api('/profile/password', { method: 'PUT', body: pw }); setPw({ currentPassword: '', newPassword: '' }); }, 'Password changed.');
 
+  const changePhoto = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    run(async () => {
+      const form = new FormData(); form.append('avatar', await compressImage(file, 400));
+      const d = await api('/profile/avatar', { method: 'PUT', form }); setUser({ ...user, ...d.user });
+    }, 'Profile photo updated.');
+  };
+  const removePhoto = () => run(async () => { const d = await api('/profile/avatar', { method: 'DELETE' }); setUser({ ...user, ...d.user }); }, 'Profile photo removed.');
+
   return (<>
     <h2>My Profile</h2>
     {msg.text && <div className={'alert alert-' + msg.type}>{msg.text}</div>}
     <div className="panel">
-      <div className="row"><div className="avatar big">{user.name[0]}</div>
+      <div className="row"><Avatar user={user} size={64} />
         <div><h3>{user.name} <span className="tag tag-active">Verified</span></h3><p className="muted">{user.email}</p>
           <p>{rating.count > 0 ? <><Stars value={rating.avg} /> {rating.avg} ({rating.count} ratings)</> : <span className="muted">No ratings yet</span>}</p></div></div>
-      <p>Branch: {user.branch || '-'} | Semester: {user.semester || '-'} | Role: {user.role} | Status: {user.status}</p>
+      <p>Phone: {user.phone || 'not added'} | Branch: {user.branch || '-'} | Semester: {user.semester || '-'} | Role: {user.role} | Status: {user.status}</p>
       {user.bio && <p>{user.bio}</p>}
       <p className="muted">Member since {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '...'} | G. L. Bajaj Institute of Technology and Management</p>
-      {!editing && <button className="btn btn-outline btn-sm" onClick={() => setEditing(true)}>Edit profile</button>}
+      {!user.phone && <div className="alert alert-error">Add your mobile number (Edit profile) so buyers and sellers can contact you. Requests need it.</div>}
+      <div className="row">
+        {!editing && <button className="btn btn-outline btn-sm" onClick={() => setEditing(true)}>Edit profile</button>}
+        <label className="btn btn-outline btn-sm file-btn">Change photo<input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={changePhoto} /></label>
+        {user.avatar && <button className="btn btn-outline btn-sm" onClick={removePhoto}>Remove photo</button>}
+      </div>
     </div>
     <div className="grid-3">
       <div className="panel stat"><b>{stats.total}</b>Total listings</div>
@@ -42,6 +57,7 @@ export default function Profile() {
     {editing && <div className="panel">
       <h3>Edit profile</h3>
       <label>Name<input value={form.name} onChange={set('name')} maxLength={60} /></label>
+      <label>Mobile number (10 digits)<input value={form.phone} onChange={set('phone')} maxLength={10} inputMode="numeric" /></label>
       <div className="row"><label>Branch<input value={form.branch} onChange={set('branch')} placeholder="e.g. CSE" /></label>
         <label>Semester<input value={form.semester} onChange={set('semester')} placeholder="e.g. 3" /></label></div>
       <label>About you (max 200 characters)<textarea rows={2} maxLength={200} value={form.bio} onChange={set('bio')} /></label>

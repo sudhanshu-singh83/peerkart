@@ -11,9 +11,9 @@ const Review = require('./models/Review');
   const upsert = async (email, name, role, password, extra = {}) =>
     User.findOneAndUpdate({ email }, { name, role, isVerified: true, status: 'active', passwordHash: await bcrypt.hash(password, 10), ...extra }, { upsert: true, new: true });
   const admin = await upsert((process.env.ADMIN_EMAIL || 'admin@glbitm.ac.in').toLowerCase(), 'PeerKart Admin', 'admin', process.env.ADMIN_PASSWORD || 'ChangeMe123');
-  const a = await upsert('student1@glbitm.ac.in', 'Aarav Sharma', 'student', 'Student123', { branch: 'CSE', semester: '3', bio: 'Selling my first-year books.' });
-  const b = await upsert('student2@glbitm.ac.in', 'Riya Verma', 'student', 'Student123', { branch: 'IT', semester: '5' });
-  const c = await upsert('student3@glbitm.ac.in', 'Kabir Singh', 'student', 'Student123', { branch: 'ECE', semester: '1' });
+  const a = await upsert('student1@glbitm.ac.in', 'Aarav Sharma', 'student', 'Student123', { phone: '9876543210', branch: 'CSE', semester: '3', bio: 'Selling my first-year books.' });
+  const b = await upsert('student2@glbitm.ac.in', 'Riya Verma', 'student', 'Student123', { phone: '9876543211', branch: 'IT', semester: '5' });
+  const c = await upsert('student3@glbitm.ac.in', 'Kabir Singh', 'student', 'Student123', { phone: '9876543212', branch: 'ECE', semester: '1' });
   const ids = [a._id, b._id, c._id];
   await Listing.deleteMany({ seller: { $in: ids } }); await Request.deleteMany({ buyer: { $in: ids } }); await Review.deleteMany({ seller: { $in: ids } });
   const make = (seller, items) => items.map((l) => ({ ...l, seller, images: [], expiresAt: config.semesterEnd }));

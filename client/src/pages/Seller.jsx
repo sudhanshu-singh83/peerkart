@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api';
 import Stars from '../components/Stars';
+import Avatar from '../components/Avatar';
 import ListingCard from '../components/ListingCard';
 
 // Public page of a seller: rating, reviews and their active items
@@ -15,7 +16,7 @@ export default function Seller() {
   const { user, rating, reviews, listings, soldCount } = data;
   return (<>
     <div className="panel">
-      <div className="row"><div className="avatar big">{user.name[0]}</div>
+      <div className="row"><Avatar user={user} size={64} />
         <div><h2>{user.name} <span className="tag tag-active">Verified student</span></h2>
           <p className="muted">{[user.branch, user.semester && 'Semester ' + user.semester].filter(Boolean).join(' | ') || 'GLBITM student'} | Member since {new Date(user.createdAt).toLocaleDateString()}</p>
           {user.bio && <p>{user.bio}</p>}</div></div>
