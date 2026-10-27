@@ -38,11 +38,17 @@ export default function Item() {
   const copyLink = () => navigator.clipboard.writeText(window.location.href).then(() => setNote({ type: 'success', text: 'Link copied.' }));
 
   return (<>
-    <p className="muted"><Link to="/home">Browse</Link> / {item.category}</p>
+    <p className="muted"><Link to="/browse">Browse</Link> / {item.category}</p>
     <div className="detail panel">
       <div className="gallery">
         {item.images.length ? (<>
-          <img className="main-photo" src={imgUrl(item.images[photo])} alt={item.title} />
+          <div className="photo-frame">
+            <img className="main-photo" src={imgUrl(item.images[photo])} alt={item.title} />
+            {item.images.length > 1 && <>
+              <button className="arrow left" onClick={() => setPhoto((photo - 1 + item.images.length) % item.images.length)}>&#8249;</button>
+              <button className="arrow right" onClick={() => setPhoto((photo + 1) % item.images.length)}>&#8250;</button>
+              <span className="photo-count">{photo + 1} / {item.images.length}</span></>}
+          </div>
           <div className="thumbs">{item.images.map((src, i) => <img key={src} src={imgUrl(src)} alt="" className={i === photo ? 'on' : ''} onClick={() => setPhoto(i)} />)}</div>
         </>) : <div className="card-img big"><span>No photo</span></div>}
       </div>

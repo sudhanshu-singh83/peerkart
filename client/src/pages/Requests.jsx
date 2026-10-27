@@ -24,7 +24,7 @@ export default function Requests({ mode }) {
     <p className="muted">{mode === 'sent' ? 'Items you asked to buy. Contact details appear once the seller accepts.' : 'Students who want to buy your items. Accept to share your email with them.'}</p>
     {error && <div className="alert alert-error">{error}</div>}
     {loading && <p className="center-msg">Loading...</p>}
-    {!loading && requests.length === 0 && <div className="center-msg">No requests yet. {mode === 'sent' && <Link to="/home">Browse items</Link>}</div>}
+    {!loading && requests.length === 0 && <div className="center-msg">No requests yet. {mode === 'sent' && <Link to="/browse">Browse items</Link>}</div>}
     {requests.map((r) => {
       const other = mode === 'sent' ? r.seller : r.buyer;
       return (

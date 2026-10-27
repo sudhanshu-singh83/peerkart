@@ -29,7 +29,8 @@ Without SMTP settings the "Send OTP" call returns a clear "Email is not configur
 ## Deployment
 - Database: MongoDB Atlas free cluster; put its URI in MONGO_URI.
 - Backend on Render: root dir `server`, build `npm install`, start `npm start`; add all .env variables, CLIENT_URL = your Vercel URL.
-  Render's disk is not permanent, so uploaded photos are lost on redeploy. For real use, swap the storage in server/middleware/upload.js for Cloudinary.
+  Photos are stored inside MongoDB (not on the server disk), so they survive restarts and redeploys.
+  Free Render blocks SMTP ports 25/465/587, so send OTP emails through Brevo on port 2525 (SMTP_HOST=smtp-relay.brevo.com).
 - Frontend on Vercel: root dir `client`, build `npm run build`, output `dist`; set VITE_API_URL to the Render URL.
   Add a vercel.json rewrite of all paths to /index.html so page refreshes work with React Router.
 

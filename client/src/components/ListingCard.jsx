@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { imgUrl } from '../api';
 import { useAuth } from '../App';
 import Stars from './Stars';
+import Thumb from './Thumb';
 
 export default function ListingCard({ listing, children }) {
   const { user } = useAuth();
@@ -10,7 +11,7 @@ export default function ListingCard({ listing, children }) {
   return (
     <div className="card">
       <Link to={'/item/' + listing._id} className="card-img">
-        {listing.images?.[0] ? <img src={imgUrl(listing.images[0])} alt={listing.title} /> : <span>{listing.category}</span>}
+        <Thumb listing={listing} />
       </Link>
       <div className="card-body">
         <h3>{listing.title}</h3>

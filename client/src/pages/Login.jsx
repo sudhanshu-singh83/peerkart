@@ -42,6 +42,16 @@ export default function Login() {
     const d = await api('/auth/register', { method: 'POST', body: { registrationToken: token, password: f.password, phone: f.phone, branch: f.branch, semester: f.semester } });
     login(d.token, d.user);
   });
+  const sendReset = () => run(async () => {
+    if (!/^[^\s@]+@glbitm\.ac\.in$/i.test(f.email)) throw new Error('Use your @glbitm.ac.in email.');
+    const d = await api('/auth/forgot-password', { method: 'POST', body: { email: f.email } });
+    setStep(2); setCooldown(60); setMsg({ type: 'success', text: d.message });
+  });
+  const doReset = () => run(async () => {
+    if (f.password.length < 8) throw new Error('Password must be at least 8 characters.');
+    await api('/auth/reset-password', { method: 'POST', body: { email: f.email, otp: f.otp, newPassword: f.password } });
+    setMode('login'); setStep(1); setF({ ...f, otp: '', password: '' }); setMsg({ type: 'success', text: 'Password changed. Please sign in.' });
+  });
   const doLogin = (e) => { e.preventDefault(); run(async () => { const d = await api('/auth/login', { method: 'POST', body: { email: f.email, password: f.password } }); login(d.token, d.user); }); };
 
   return (
@@ -57,7 +67,21 @@ export default function Login() {
           <label>College email<input type="email" value={f.email} onChange={set('email')} placeholder="name@glbitm.ac.in" required /></label>
           <label>Password<input type="password" value={f.password} onChange={set('password')} required /></label>
           <button className="btn" disabled={busy}>{busy ? 'Signing in...' : 'Sign In'}</button>
+          <p><button type="button" className="btn-link" onClick={() => { setMode('forgot'); setStep(1); setMsg({}); }}>Forgot password?</button></p>
         </form>
+      ) : mode === 'forgot' ? (
+        <div>
+          <p className="muted">Enter your college email. We will send a 6-digit OTP to reset your password.</p>
+          <label>College email<input type="email" value={f.email} onChange={set('email')} placeholder="name@glbitm.ac.in" disabled={step > 1} /></label>
+          {step === 1 && <button className="btn" disabled={busy} onClick={sendReset}>{busy ? 'Sending...' : 'Send OTP'}</button>}
+          {step === 2 && (<>
+            <label>6-digit OTP<input value={f.otp} onChange={set('otp')} maxLength={6} inputMode="numeric" /></label>
+            <label>New password (min 8 characters)<input type="password" value={f.password} onChange={set('password')} /></label>
+            <div className="row"><button className="btn" disabled={busy} onClick={doReset}>Reset password</button>
+              <button className="btn btn-outline" disabled={busy || cooldown > 0} onClick={sendReset}>{cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend OTP'}</button></div>
+          </>)}
+          <p><button type="button" className="btn-link" onClick={() => { setMode('login'); setStep(1); setMsg({}); }}>Back to Sign In</button></p>
+        </div>
       ) : (
         <div>
           <label>Full name<input value={f.name} onChange={set('name')} disabled={step > 1} /></label>

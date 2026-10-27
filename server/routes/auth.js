@@ -75,6 +75,43 @@ router.post('/register', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Forgot password, step 1: email an OTP to a registered student
+router.post('/forgot-password', async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!isCollegeEmail(email)) return res.status(400).json({ message: 'Only @glbitm.ac.in emails are allowed.' });
+    const clean = email.trim().toLowerCase();
+    const generic = { message: 'If this email is registered, an OTP has been sent to it.' };
+    const user = await User.findOne({ email: clean });
+    if (!user || user.status === 'deactivated') return res.json(generic); // same answer, so emails cannot be guessed
+    const old = await Otp.findOne({ email: clean });
+    if (old && Date.now() - old.lastSentAt < 60 * 1000) return res.status(429).json({ message: 'Please wait 60 seconds before requesting another OTP.' });
+    const otp = String(crypto.randomInt(100000, 1000000));
+    await sendOtpEmail(clean, otp);
+    await Otp.findOneAndUpdate({ email: clean },
+      { otpHash: await bcrypt.hash(otp, 8), expiresAt: new Date(Date.now() + 10 * 60 * 1000), attempts: 0, lastSentAt: new Date() }, { upsert: true });
+    res.json(generic);
+  } catch (err) { next(err); }
+});
+
+// Forgot password, step 2: check the OTP and set a new password
+router.post('/reset-password', async (req, res, next) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!isCollegeEmail(email) || !/^\d{6}$/.test(otp || '')) return res.status(400).json({ message: 'Enter a valid email and 6-digit OTP.' });
+    if (!newPassword || newPassword.length < 8) return res.status(400).json({ message: 'Password must be at least 8 characters.' });
+    const clean = email.trim().toLowerCase();
+    const [record, user] = await Promise.all([Otp.findOne({ email: clean }), User.findOne({ email: clean })]);
+    if (!record || !user) return res.status(400).json({ message: 'No OTP found. Please request a new one.' });
+    if (record.expiresAt < new Date()) return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
+    if (record.attempts >= 5) return res.status(429).json({ message: 'Too many wrong attempts. Request a new OTP.' });
+    if (!(await bcrypt.compare(otp, record.otpHash))) { record.attempts += 1; await record.save(); return res.status(400).json({ message: 'Incorrect OTP.' }); }
+    user.passwordHash = await bcrypt.hash(newPassword, 10); await user.save();
+    await record.deleteOne();
+    res.json({ message: 'Password changed. You can sign in now.' });
+  } catch (err) { next(err); }
+});
+
 router.post('/login', async (req, res, next) => {
   try {
     const { email, password } = req.body;
